@@ -94,7 +94,12 @@ app.post('/api/items', upload.single('image'), (req, res) => {
     res.status(201).json(createdItem);
 });
 
-// Start Server
-app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
-});
+// Export the app for Vercel
+module.exports = app;
+
+// Start Server only if not running in Vercel (or if run directly)
+if (require.main === module) {
+    app.listen(PORT, () => {
+        console.log(`Server is running on http://localhost:${PORT}`);
+    });
+}

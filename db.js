@@ -1,11 +1,22 @@
 const fs = require('fs');
 const path = require('path');
 
-const DB_FILE = path.join(__dirname, 'data', 'db.json');
+const os = require('os');
+
+// Use /tmp for Vercel, otherwise use local data folder
+const isVercel = process.env.VERCEL === '1';
+const DB_FILE = isVercel
+    ? path.join(os.tmpdir(), 'db.json')
+    : path.join(__dirname, 'data', 'db.json');
 
 // Ensure DB file exists
 if (!fs.existsSync(DB_FILE)) {
-    fs.writeFileSync(DB_FILE, JSON.stringify([], null, 2));
+    // If we can't write to the directory (e.g. read-only fs), this might fail if not handled
+    try {
+        fs.writeFileSync(DB_FILE, JSON.stringify([], null, 2));
+    } catch (error) {
+        console.error("Could not create DB file:", error);
+    }
 }
 
 const readData = () => {
@@ -30,7 +41,7 @@ const writeData = (data) => {
 
 module.exports = {
     getAllItems: () => readData(),
-    
+
     getItemById: (id) => {
         const items = readData();
         return items.find(item => item.id === id);

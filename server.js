@@ -10,14 +10,14 @@ const os = require('os');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Ensure uploads directory exists
 // On Render, we can write to disk, but it's ephemeral (gone on restart) unless we use a Disk.
 // For Vercel, we used /tmp. For Render, standard local folder is fine (but ephemeral).
 const isVercel = process.env.VERCEL === '1';
 const uploadDir = isVercel ? path.join(os.tmpdir(), 'uploads') : path.join(__dirname, 'uploads');
 
+// Ensure upload directory exists
 if (!fs.existsSync(uploadDir)) {
-    fs.mkdirSync(uploadDir);
+    fs.mkdirSync(uploadDir, { recursive: true });
 }
 
 // Middleware
@@ -35,7 +35,25 @@ const storage = multer.diskStorage({
         cb(null, Date.now() + path.extname(file.originalname)); // Append timestamp to filename
     }
 });
-const upload = multer({ storage: storage });
+
+// File Filter (Images Only)
+const fileFilter = (req, file, cb) => {
+    const allowedTypes = /jpeg|jpg|png|gif|webp/;
+    const extname = allowedTypes.test(path.extname(file.originalname).toLowerCase());
+    const mimetype = allowedTypes.test(file.mimetype);
+
+    if (extname && mimetype) {
+        return cb(null, true);
+    } else {
+        cb(new Error('Only images are allowed (jpeg, jpg, png, gif, webp)!'));
+    }
+};
+
+const upload = multer({
+    storage: storage,
+    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    fileFilter: fileFilter
+});
 
 // API Endpoints
 

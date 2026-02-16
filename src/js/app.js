@@ -6,50 +6,121 @@ const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString(undefined, options);
 };
 
+// Debounce helper
+function debounce(func, wait) {
+    let timeout;
+    return function executedFunction(...args) {
+        const later = () => {
+            clearTimeout(timeout);
+            func(...args);
+        };
+        clearTimeout(timeout);
+        timeout = setTimeout(later, wait);
+    };
+}
+
 // Fetch and display items (for lost.html and found.html)
-async function fetchItems(type, containerId, category = '', search = '') {
+async function fetchItems(type, containerId) {
     const container = document.getElementById(containerId);
     if (!container) return;
 
-    try {
-        let url = `${API_URL}?type=${type}`;
-        if (category) url += `&category=${category}`;
-        if (search) url += `&search=${search}`;
+    const searchInput = document.getElementById('searchInput');
+    const categoryFilter = document.getElementById('categoryFilter');
 
-        const response = await fetch(url);
-        const items = await response.json();
+    const loadItems = async () => {
+        try {
+            container.innerHTML = '<p>Loading...</p>';
+            let url = `${API_URL}?type=${type}`;
 
-        container.innerHTML = '';
-        if (items.length === 0) {
-            container.innerHTML = '<p class="no-items">No items found.</p>';
-            return;
+            if (categoryFilter && categoryFilter.value) {
+                url += `&category=${categoryFilter.value}`;
+            }
+            if (searchInput && searchInput.value) {
+                url += `&search=${searchInput.value}`;
+            }
+
+            const response = await fetch(url);
+            const items = await response.json();
+
+            container.innerHTML = '';
+            if (items.length === 0) {
+                container.innerHTML = '<p class="no-items">No items found.</p>';
+                return;
+            }
+
+            items.forEach(item => {
+                const itemCard = document.createElement('div');
+                itemCard.className = 'item-card';
+                itemCard.innerHTML = `
+                    <img src="${item.imageUrl || '/images/placeholder.png'}" alt="${item.title}" onerror="this.src='https://placehold.co/300x200?text=No+Image'">
+                    <div class="card-content">
+                        <h3>${item.title}</h3>
+                        <p class="location"><i class="fas fa-map-marker-alt"></i> ${item.location}</p>
+                        <p class="date"><i class="far fa-calendar-alt"></i> ${formatDate(item.dateLostFound)}</p>
+                        <a href="details.html?id=${item.id}" class="btn-details">View Details</a>
+                    </div>
+                `;
+                container.appendChild(itemCard);
+            });
+        } catch (error) {
+            console.error('Error fetching items:', error);
+            container.innerHTML = '<p class="error">Failed to load items. Please try again later.</p>';
         }
+    };
 
-        items.forEach(item => {
-            const itemCard = document.createElement('div');
-            itemCard.className = 'item-card';
-            itemCard.innerHTML = `
-                <img src="${item.imageUrl || '/images/placeholder.png'}" alt="${item.title}" onerror="this.src='https://placehold.co/300x200?text=No+Image'">
-                <div class="card-content">
-                    <h3>${item.title}</h3>
-                    <p class="location"><i class="fas fa-map-marker-alt"></i> ${item.location}</p>
-                    <p class="date"><i class="far fa-calendar-alt"></i> ${formatDate(item.dateLostFound)}</p>
-                    <a href="details.html?id=${item.id}" class="btn-details">View Details</a>
-                </div>
-            `;
-            container.appendChild(itemCard);
-        });
-    } catch (error) {
-        console.error('Error fetching items:', error);
-        container.innerHTML = '<p class="error">Failed to load items. Please try again later.</p>';
+    // Initial Load
+    loadItems();
+
+    // Event Listeners
+    if (searchInput) {
+        searchInput.addEventListener('input', debounce(() => loadItems(), 500));
     }
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => loadItems());
+    }
+}
+
+// Initialize Lost/Found Pages
+if (document.getElementById('lost-items-container')) {
+    fetchItems('lost', 'lost-items-container');
+}
+if (document.getElementById('found-items-container')) {
+    fetchItems('found', 'found-items-container');
 }
 
 // Post Item Form Handler
 const postForm = document.getElementById('postItemForm');
+const imageInput = document.getElementById('imageInput');
+const imagePreviewContainer = document.getElementById('image-preview-container');
+const imagePreview = document.getElementById('image-preview');
+const loadingMessage = document.getElementById('loading-message');
+const submitBtn = document.querySelector('.form-submit');
+
+if (imageInput) {
+    imageInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                imagePreview.src = e.target.result;
+                imagePreviewContainer.style.display = 'block';
+            }
+            reader.readAsDataURL(file);
+        } else {
+            imagePreview.src = '';
+            imagePreviewContainer.style.display = 'none';
+        }
+    });
+}
+
 if (postForm) {
     postForm.addEventListener('submit', async (e) => {
         e.preventDefault();
+
+        // Disable button and show loading
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Posting...';
+        if (loadingMessage) loadingMessage.style.display = 'block';
 
         const formData = new FormData(postForm);
 
@@ -69,6 +140,11 @@ if (postForm) {
         } catch (error) {
             console.error('Error posting item:', error);
             alert('An error occurred. Please try again.');
+        } finally {
+            // Re-enable button
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Submit Post';
+            if (loadingMessage) loadingMessage.style.display = 'none';
         }
     });
 }
@@ -142,7 +218,7 @@ const navLinks = document.querySelector('.nav-links');
 if (menuToggle && navLinks) {
     menuToggle.addEventListener('click', () => {
         navLinks.classList.toggle('active');
-        
+
         // Toggle icon between bars and times
         const icon = menuToggle.querySelector('i');
         if (icon) {

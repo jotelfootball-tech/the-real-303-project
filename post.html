@@ -109,8 +109,12 @@
 
                 <div class="form-group">
                     <label>Upload Image</label>
-                    <input type="file" name="image" accept="image/*">
+                    <input type="file" name="image" id="imageInput" accept="image/*">
+                    <div id="image-preview-container" style="margin-top: 10px; display: none;">
+                        <img id="image-preview" src="" alt="Image Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px; border: 1px solid #ddd;">
+                    </div>
                 </div>
+                <div id="loading-message" style="display: none; color: #666; font-style: italic; margin-bottom: 10px;">Uploading... Please wait.</div>
 
                 <h3>Contact Information (Private until requested)</h3>
                 <div class="form-group">

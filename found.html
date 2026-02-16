@@ -40,7 +40,6 @@
                 <option value="clothing">Clothing</option>
                 <option value="others">Other</option>
             </select>
-            <button onclick="applyFilters()" class="btn btn-found" style="margin: 0;">Search</button>
         </div>
 
         <div id="found-items-container" class="items-grid">
@@ -53,16 +52,6 @@
     </footer>
 
     <script type="module" src="/src/js/app.js"></script>
-    <script>
-        // Initial Load
-        fetchItems('found', 'found-items-container');
-
-        function applyFilters() {
-            const search = document.getElementById('searchInput').value;
-            const category = document.getElementById('categoryFilter').value;
-            fetchItems('found', 'found-items-container', category, search);
-        }
-    </script>
 </body>
 
 </html>
